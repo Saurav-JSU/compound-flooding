@@ -1,0 +1,54 @@
+# Ignore all content in the root-level compound_flooding folder
+/compound_flooding/*
+!/src/compound_flooding/**
+
+# Ignore outputs and processed data
+/outputs/
+/processed_data/
+/00_setup/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Caches
+.pytest_cache/
+
+# Virtual environment
+.venv/
+env/
+venv/
+
+# Jupyter Notebook checkpoints
+*.ipynb_checkpoints
+
+# VS Code settings
+.vscode/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Logs and temp files
+*.log
+*.tmp
+*.bak
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Python packaging
+*.egg
+*.manifest
+
+# Environment variables
+.env
+.env.*
+
+# Notebook outputs and generated files
+file.ipynb
+output.docx
+inspect_netcdf.py

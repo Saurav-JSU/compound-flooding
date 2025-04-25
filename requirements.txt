@@ -1,0 +1,33 @@
+# Core dependencies
+numpy>=1.21.0
+pandas>=1.3.0
+scipy>=1.7.0
+xarray>=0.19.0
+matplotlib>=3.4.0
+cartopy>=0.20.0
+dask>=2021.10.0
+distributed>=2021.10.0
+netcdf4>=1.5.7
+pyproj>=3.2.0
+
+# Testing and development
+pytest>=6.2.5
+pytest-cov>=2.12.1
+
+# Optional GPU acceleration
+# Uncomment if GPU support is needed
+cupy>=10.0.0
+numba>=0.54.0
+#rapids-cudf>=21.10.0  # For pandas-like GPU DataFrames
+
+# For copula modeling
+scikit-learn>=1.0.0
+statsmodels>=0.13.0
+
+# For visualization
+seaborn>=0.11.2
+tqdm>=4.62.3  # For progress bars
+
+# Version pinning
+# These versions are confirmed to work together
+# Adjust if needed for your specific environment
