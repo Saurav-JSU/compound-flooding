@@ -150,88 +150,118 @@ station_code,datetime,t2m,sp,sea_level,prcp
 
 ---
 
-# Summary of Preprocessed Data for Tier 1 Analysis
+# Compound Flooding Toolkit
 
-## 1. Dataset Overview
+A modular Python codebase for ingesting, preprocessing, and analyzing compound flood data from GESLA tide-gauge and ERA5 variables.
 
-After quality control and correction processes, our final dataset consists of:
+## Features so far
 
-| Quality Tier | Count | Description | Usage |
-|--------------|-------|-------------|-------|
-| Tier A | 199 | Excellent quality stations | Use original data |
-| Tier B (improved) | ~17 | Successfully corrected stations | Use corrected data |
-| Total Usable | ~206 | Combined high-quality stations | Primary dataset for Tier 1 |
-| Tier C/D | ~116 | Low quality or uncorrectable | Exclude from analysis |
+- **`data_io.py`**: Validate paths, load station metadata (CSV), list station codes, and load individual station CSVs (pandas/Dask).
+- **`preprocess.py`**: Clean and prepare time-series data:
+  - Replace sentinel `-99.9999` with `NaN`
+  - Convert units:
+    - `total_precipitation` from meters → mm/h
+    - `surface_pressure` from Pa → hPa
+    - `temperature_2m` from Kelvin → °C
+  - Normalize timestamps to UTC
+  - Drop duplicates
+  - Optional linear detrend of `sea_level`
+  - Interpolate small gaps (configurable hours)
+  - Clip extreme spikes (configurable threshold)
+- **`cli.py`**: Command-line interface with parallel ingest:
+  - `ingest` sub-command: ingest & preprocess **all** stations in parallel using `ProcessPoolExecutor`
+  - Flags for detrending, gap interpolation, spike clipping, and worker count
 
-The usable dataset provides comprehensive coverage across U.S. coastal regions with approximately 206 stations. The full list of usable station codes is available in `data/processed/usable_stations_for_tier1.csv`.
+## Installation
 
-## 2. Key Characteristics
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/Saurav-JSU/compound_flooding.git
+   cd compound_flooding
+   ```
+2. Create and activate a Python environment (Python ≥ 3.10):
+   ```bash
+   python -m venv venv
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install pandas xarray
+   # Optional: Dask for large CSVs
+   pip install "dask[dataframe]"
+   ```
 
-### 2.1 Temporal Coverage
-- **Typical Period**: 1981-2021 (~40 years)
-- **Temporal Resolution**: Hourly
-- **Average Record Length**: 34.93 years per station
+## Project Structure
 
-### 2.2 Sea Level Data
-- **Missing Data**: <5% for Tier A stations, 5-10% for corrected Tier B stations
-- **Typical 99th Percentile**: ~2.92 meters (varies by region)
-- **Null Value Indicator**: -99.9999
+```
+compound_flooding/             # Project root
+├─ data/                       # Raw data directory
+│  └─ GESLA/usa_metadata.csv   # Station metadata
+├─ compound_flooding/          # Source code
+│  ├─ data_io.py
+│  ├─ preprocess.py
+│  └─ cli.py
+├─ outputs/                    # Processed outputs (generated)
+│  └─ cleaned/                 # NetCDF files per station
+└─ README.md
+```
 
-### 2.3 Precipitation Data
-- **Units**: Millimeters (mm), standardized from multiple sources
-- **Typical 99th Percentile**: ~21.47 mm
-- **Source Priority**: Ground data where available, ERA5 as backup
+## Usage
 
-### 2.4 Compound Events
-- **Joint Exceedances**: Average of ~1500 per station using 95th percentile thresholds
-- **Conditional Probability Ratio**: Average of 2.32 (indicating significant dependence)
+### 1. Smoke-test `data_io.py`
 
-## 3. Data Corrections Applied
+Validate paths, list station codes, and preview a station:
+```bash
+python src/compound_flooding/data_io.py \
+  --metadata data/GESLA/usa_metadata.csv \
+  --station-dir compound_flooding/GESLA_ERA5_with_sea_level
+```
 
-| Correction Type | Description | Affected Stations |
-|-----------------|-------------|-------------------|
-| Sea Level Outliers | Unit conversion or capping of physically implausible values | ~10 stations |
-| Missing Data Fill | Linear interpolation of short gaps (1-2 hours) | ~12 stations |
-| Precipitation Standardization | Consolidated ground and ERA5 data with unit standardization | All stations |
+Expected output:
+```
+Verifying paths...
+  OK: paths are valid.
+Listing station codes...
+  Found N stations; sample: ["551A", ...]
+Loading data for station: 551A...
+  Loaded 5 rows; columns: ["datetime", ...]
+Smoke test completed successfully.
+```
 
-## 4. File Structure for Tier 1 Analysis
+### 2. Smoke-test `preprocess.py`
 
-### 4.1 Input Files
-- **Original Data**: `compound_flooding/GESLA_ERA5_with_sea_level/{SITE_CODE}_ERA5_with_sea_level.csv`
-- **Corrected Data**: `data/processed/corrected/{SITE_CODE}_corrected.csv`
-- **Station List**: `data/processed/usable_stations_for_tier1.csv`
-- **Metadata**: `compound_flooding/GESLA/usa_metadata.csv`
+Clean a single station CSV:
+```bash
+python src/compound_flooding/preprocess.py \
+  --station-csv compound_flooding/GESLA_ERA5_with_sea_level/551A_ERA5_with_sea_level.csv \
+  --detrend \
+  --max-gap 3 \
+  --spike 5.0
+```
 
-### 4.2 Key Columns
-- `datetime`: Hourly timestamps (UTC)
-- `sea_level`: Water level measurements in meters
-- `precipitation_mm`: Consolidated precipitation in millimeters
-- `total_precipitation_mm`: ERA5 precipitation in millimeters
-- `ground_precipitation`: Ground-based precipitation (varies in units)
-- Additional meteorological variables: wind components, pressure, temperature
+This prints the cleaned `xarray.Dataset` and a few sample values.
 
-## 5. Recommendations for Tier 1 Analysis
+### 3. Parallel ingest with CLI
 
-1. **Data Loading**:
-   - Check the quality tier of each station before loading
-   - Load from corrected files for improved Tier B stations
-   - Verify null values are properly handled (-99.9999)
+Process all stations in parallel and save per-station NetCDFs:
+```bash
+python -m src.compound_flooding.cli ingest \
+  --metadata compound_flooding/data/GESLA/usa_metadata.csv \
+  --station-dir compound_flooding/GESLA_ERA5_with_sea_level \
+  --output-dir outputs/cleaned \
+  --detrend \
+  --max-gap 3 \
+  --spike 5.0 \
+  --workers 96
+```
 
-2. **Threshold Selection**:
-   - Use the 95th or 99th percentiles as starting points for EVA thresholds
-   - Consider regional differences in threshold selection
-   - Validate thresholds with mean residual life plots as specified in methodology
+This will spawn up to 96 workers to speed up ingest and preprocessing of ~2145 stations.
 
-3. **Declustering**:
-   - Implement 48-hour separation between extreme events as specified in methodology
-   - Handle autocorrelation in hourly data to ensure independent peak events
+## Next Steps
 
-4. **Joint Exceedance Analysis**:
-   - Use the consolidated precipitation_mm column for joint analysis
-   - Verify CPR calculations with appropriate null hypothesis testing
-   - Explore temporal offsets between peaks (±6h, ±12h, ±24h)
+- **Tier 1 statistics**: Implement univariate POT/GPD fits, empirical joint exceedance, CPR calculations.
+- **Tier 2 copulas**: Bivariate copula modeling (Gumbel, t, etc.) and diagnostics.
+- **Tier 3 advanced**: Vine copulas, Bayesian networks, and ML approaches.
 
-By using this preprocessed dataset, the Tier 1 extreme value analysis and joint exceedance analysis can proceed with high-quality, standardized data, ensuring robust results for the compound flooding study.
-
-© 2025 Saurav Bhattarai – Jackson State University Water Lab
+Feel free to explore and extend! Contributions are welcome via pull requests.
 
