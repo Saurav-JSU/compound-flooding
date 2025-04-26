@@ -150,5 +150,88 @@ station_code,datetime,t2m,sp,sea_level,prcp
 
 ---
 
+# Summary of Preprocessed Data for Tier 1 Analysis
+
+## 1. Dataset Overview
+
+After quality control and correction processes, our final dataset consists of:
+
+| Quality Tier | Count | Description | Usage |
+|--------------|-------|-------------|-------|
+| Tier A | 199 | Excellent quality stations | Use original data |
+| Tier B (improved) | ~17 | Successfully corrected stations | Use corrected data |
+| Total Usable | ~206 | Combined high-quality stations | Primary dataset for Tier 1 |
+| Tier C/D | ~116 | Low quality or uncorrectable | Exclude from analysis |
+
+The usable dataset provides comprehensive coverage across U.S. coastal regions with approximately 206 stations. The full list of usable station codes is available in `data/processed/usable_stations_for_tier1.csv`.
+
+## 2. Key Characteristics
+
+### 2.1 Temporal Coverage
+- **Typical Period**: 1981-2021 (~40 years)
+- **Temporal Resolution**: Hourly
+- **Average Record Length**: 34.93 years per station
+
+### 2.2 Sea Level Data
+- **Missing Data**: <5% for Tier A stations, 5-10% for corrected Tier B stations
+- **Typical 99th Percentile**: ~2.92 meters (varies by region)
+- **Null Value Indicator**: -99.9999
+
+### 2.3 Precipitation Data
+- **Units**: Millimeters (mm), standardized from multiple sources
+- **Typical 99th Percentile**: ~21.47 mm
+- **Source Priority**: Ground data where available, ERA5 as backup
+
+### 2.4 Compound Events
+- **Joint Exceedances**: Average of ~1500 per station using 95th percentile thresholds
+- **Conditional Probability Ratio**: Average of 2.32 (indicating significant dependence)
+
+## 3. Data Corrections Applied
+
+| Correction Type | Description | Affected Stations |
+|-----------------|-------------|-------------------|
+| Sea Level Outliers | Unit conversion or capping of physically implausible values | ~10 stations |
+| Missing Data Fill | Linear interpolation of short gaps (1-2 hours) | ~12 stations |
+| Precipitation Standardization | Consolidated ground and ERA5 data with unit standardization | All stations |
+
+## 4. File Structure for Tier 1 Analysis
+
+### 4.1 Input Files
+- **Original Data**: `compound_flooding/GESLA_ERA5_with_sea_level/{SITE_CODE}_ERA5_with_sea_level.csv`
+- **Corrected Data**: `data/processed/corrected/{SITE_CODE}_corrected.csv`
+- **Station List**: `data/processed/usable_stations_for_tier1.csv`
+- **Metadata**: `compound_flooding/GESLA/usa_metadata.csv`
+
+### 4.2 Key Columns
+- `datetime`: Hourly timestamps (UTC)
+- `sea_level`: Water level measurements in meters
+- `precipitation_mm`: Consolidated precipitation in millimeters
+- `total_precipitation_mm`: ERA5 precipitation in millimeters
+- `ground_precipitation`: Ground-based precipitation (varies in units)
+- Additional meteorological variables: wind components, pressure, temperature
+
+## 5. Recommendations for Tier 1 Analysis
+
+1. **Data Loading**:
+   - Check the quality tier of each station before loading
+   - Load from corrected files for improved Tier B stations
+   - Verify null values are properly handled (-99.9999)
+
+2. **Threshold Selection**:
+   - Use the 95th or 99th percentiles as starting points for EVA thresholds
+   - Consider regional differences in threshold selection
+   - Validate thresholds with mean residual life plots as specified in methodology
+
+3. **Declustering**:
+   - Implement 48-hour separation between extreme events as specified in methodology
+   - Handle autocorrelation in hourly data to ensure independent peak events
+
+4. **Joint Exceedance Analysis**:
+   - Use the consolidated precipitation_mm column for joint analysis
+   - Verify CPR calculations with appropriate null hypothesis testing
+   - Explore temporal offsets between peaks (±6h, ±12h, ±24h)
+
+By using this preprocessed dataset, the Tier 1 extreme value analysis and joint exceedance analysis can proceed with high-quality, standardized data, ensuring robust results for the compound flooding study.
+
 © 2025 Saurav Bhattarai – Jackson State University Water Lab
 

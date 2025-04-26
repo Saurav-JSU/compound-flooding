@@ -44,7 +44,7 @@ data/GESLA/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/compound_flooding.git
+git clone https://github.com/Saurav-JSU/compound_flooding.git
 cd compound_flooding
 
 # Create and activate a virtual environment
