@@ -37,6 +37,7 @@ dist/
 *.log
 *.tmp
 *.bak
+*.csv
 
 # OS-specific
 .DS_Store
