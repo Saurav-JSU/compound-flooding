@@ -1,6 +1,8 @@
 # Ignore all content in the root-level compound_flooding folder
 /compound_flooding/*
-!/src/compound_flooding/**
+/data/
+/logs/
+/plots/
 
 # Ignore outputs and processed data
 /outputs/
