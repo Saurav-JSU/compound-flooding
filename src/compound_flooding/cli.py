@@ -8,6 +8,7 @@ Sub-commands:
   thresholds: Analyze and find optimal thresholds for variables (parallel)
   tier1     : Run Tier-1 statistical analysis (parallel)
   copula    : Fit copulas to one or many cleaned NetCDFs (parallel)
+  tier2     : Run Tier-2 copula analysis (parallel)
 """
 
 import argparse
@@ -27,6 +28,7 @@ from src.compound_flooding.data_io import validate_paths, load_metadata, load_st
 from src.compound_flooding.preprocess import preprocess_dataframe
 from src.compound_flooding.thresholds import select_threshold, find_optimal_threshold
 from src.compound_flooding.tier1_stats import run_tier1
+from src.compound_flooding.tier2_copula import run_tier2
 from src.compound_flooding.copula_utils import (
     fit_gumbel, fit_frank, fit_student, fit_gaussian, select_best_copula
 )
@@ -548,6 +550,31 @@ def main():
     p_copula.add_argument('--workers', type=int, default=0,
                           help='Number of parallel workers (0=all cores)')
 
+    # tier2 sub-command
+    p_tier2 = sub.add_parser('tier2', help='Run Tier-2 copula analysis')
+    p_tier2.add_argument('--netcdf-dir', default='outputs/cleaned',
+                        help='Directory containing cleaned NetCDF files')
+    p_tier2.add_argument('--tier1-dir', default='outputs/tier1',
+                        help='Directory containing Tier-1 outputs (optional)')
+    p_tier2.add_argument('--output-dir', default='outputs/tier2',
+                        help='Directory to save Tier-2 outputs')
+    p_tier2.add_argument('--u-var', default='sea_level',
+                        help='First variable for copula')
+    p_tier2.add_argument('--v-var', default='total_precipitation',
+                        help='Second variable for copula')
+    p_tier2.add_argument('--method', choices=['auto', 'gumbel', 'frank', 'student', 'gaussian', 'clayton'],
+                        default='auto', help='Copula method (auto or specific family)')
+    p_tier2.add_argument('--return-periods', nargs='+', type=float, default=[10, 20, 50, 100],
+                        help='Return periods to compute')
+    p_tier2.add_argument('--levels', nargs='+', type=float, default=[0.9, 0.95, 0.99],
+                        help='Exceedance probability levels to analyze')
+    p_tier2.add_argument('--output-format', choices=['json', 'parquet'], default='json',
+                        help='Output format (json or parquet)')
+    p_tier2.add_argument('--workers', type=int, default=0,
+                        help='Number of parallel workers (0=all cores)')
+    p_tier2.add_argument('--max-files', type=int, default=None,
+                        help='Maximum number of files to process (for testing)')
+
     args = parser.parse_args()
 
     if args.command == 'ingest':
@@ -633,6 +660,21 @@ def main():
                     skip_count += 1
         
         logger.info(f"Copula fitting complete: {success_count} succeeded, {error_count} failed, {skip_count} skipped")
+
+    elif args.command == 'tier2':
+        run_tier2(
+            netcdf_dir=args.netcdf_dir,
+            output_dir=args.output_dir,
+            tier1_dir=args.tier1_dir,
+            u_var=args.u_var,
+            v_var=args.v_var,
+            copula_method=args.method,
+            compute_return_periods=args.return_periods,
+            exceedance_levels=args.levels,
+            output_format=args.output_format,
+            workers=(args.workers if args.workers > 0 else None),
+            max_files=args.max_files
+        )
 
 
 if __name__ == '__main__':
