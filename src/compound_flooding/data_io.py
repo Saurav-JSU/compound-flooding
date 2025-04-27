@@ -2,114 +2,83 @@
 """
 Module: data_io.py
 Responsibilities:
-- Validate input paths
-- Load station metadata and individual station time-series CSVs
-- Offer switchable backend (pandas/Dask) for scalability
-- Smoke-test CLI to verify functionality against real data
+- Validate metadata path and station directory
+- Load station metadata CSV into pandas DataFrame
+- List available station codes
+- Load station CSV (flexible pattern matching)
 """
-from pathlib import Path
+import os
+import glob
 import pandas as pd
-
-# Try Dask for large-data support
-try:
-    import dask.dataframe as dd
-    _USE_DASK = True
-except ImportError:
-    _USE_DASK = False
 
 
 def validate_paths(metadata_path: str, station_dir: str) -> None:
     """
-    Ensure metadata CSV and station directory exist.
-    Raises FileNotFoundError or NotADirectoryError on issues.
+    Ensure metadata CSV and station directory both exist.
     """
-    meta = Path(metadata_path)
-    st_dir = Path(station_dir)
-    if not meta.is_file():
+    if not os.path.isfile(metadata_path):
         raise FileNotFoundError(f"Metadata file not found: {metadata_path}")
-    if not st_dir.is_dir():
+    if not os.path.isdir(station_dir):
         raise NotADirectoryError(f"Station directory not found: {station_dir}")
+    print("Verifying paths...")
+    print(f"  Metadata: {metadata_path}")
+    print(f"  Station dir: {station_dir}")
+    print("  OK: paths are valid.")
 
 
 def load_metadata(metadata_path: str) -> pd.DataFrame:
     """
-    Read station master metadata into a pandas DataFrame.
-    Expects a 'SITE CODE' column.
+    Load station metadata CSV. Returns DataFrame with 'SITE CODE' as str.
     """
     df = pd.read_csv(metadata_path)
     if 'SITE CODE' not in df.columns:
-        raise KeyError("Metadata CSV must include 'SITE CODE' column")
+        raise KeyError("Metadata CSV missing 'SITE CODE' column")
+    df['SITE CODE'] = df['SITE CODE'].astype(str)
+    print(f"Loaded metadata: {len(df)} stations")
     return df
 
 
-def list_station_codes(metadata_path: str) -> list[str]:
+def list_station_codes(meta: pd.DataFrame) -> list[str]:
     """
-    Return list of station codes from metadata.
+    Return list of station codes from metadata DataFrame.
     """
-    df = load_metadata(metadata_path)
-    return df['SITE CODE'].astype(str).tolist()
+    codes = meta['SITE CODE'].tolist()
+    print(f"Listing station codes... Found {len(codes)} codes; sample: {codes[:5]}")
+    return codes
 
 
-def load_station_data(station_code: str, station_dir: str):
+def load_station_data(station_code: str, station_dir: str) -> pd.DataFrame:
     """
-    Load merged GESLA+ERA5 CSV for a given station code.
-    Uses Dask for large files if available.
+    Load station CSV by code, matching any filename containing the code.
 
-    Returns
-    -------
-    pandas.DataFrame or dask.DataFrame
+    Example: code='240A' matches '240A_ERA5_with_sea_level.csv'.
     """
-    filename = f"{station_code}_ERA5_with_sea_level.csv"
-    filepath = Path(station_dir) / filename
-    if not filepath.is_file():
-        raise FileNotFoundError(f"Station file not found: {filepath}")
-    parse_dates = ['datetime']
-    if _USE_DASK:
-        return dd.read_csv(str(filepath), parse_dates=parse_dates)
-    return pd.read_csv(filepath, parse_dates=parse_dates)
+    pattern = os.path.join(station_dir, f"*{station_code}*_ERA5_with_sea_level.csv")
+    matches = glob.glob(pattern)
+    if not matches:
+        raise FileNotFoundError(f"No station CSV found for code '{station_code}' in {station_dir}")
+    filepath = matches[0]
+    df = pd.read_csv(filepath, parse_dates=['datetime'])
+    print(f"Loading data for station: {station_code} → {os.path.basename(filepath)}")
+    print(f"  Loaded {len(df)} rows; columns: {list(df.columns)}")
+    return df
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     import argparse
-    
-    parser = argparse.ArgumentParser(
-        description="Smoke-test data_io module with real metadata and station files"
-    )
-    parser.add_argument(
-        '--metadata', required=True,
-        help='Path to data/GESLA/usa_metadata.csv'
-    )
-    parser.add_argument(
-        '--station-dir', required=True,
-        help='Path to GESLA_ERA5_with_sea_level directory'
-    )
+
+    parser = argparse.ArgumentParser(description='Smoke-test data_io module')
+    parser.add_argument('--metadata', required=True, help='Path to metadata CSV')
+    parser.add_argument('--station-dir', required=True, help='Directory of station CSVs')
+    parser.add_argument('--sample-code', default=None, help='One station code to test')
     args = parser.parse_args()
 
-    print("Verifying paths...")
-    try:
-        validate_paths(args.metadata, args.station_dir)
-        print("  OK: paths are valid.")
-    except Exception as e:
-        print(f"  ERROR: {e}")
-        exit(1)
-
-    print("Listing station codes...")
-    codes = list_station_codes(args.metadata)
-    print(f"  Found {len(codes)} station codes; sample: {codes[:5]}")
-
-    if codes:
-        sample = codes[0]
-        print(f"Loading data for station: {sample}...")
-        try:
-            df = load_station_data(sample, args.station_dir)
-            # If Dask, compute a small sample
-            if _USE_DASK:
-                df = df.head(5)
-            else:
-                df = df.iloc[:5]
-            print(f"  Loaded {len(df)} rows; columns: {list(df.columns)}")
-        except Exception as e:
-            print(f"  ERROR loading station {sample}: {e}")
-            exit(1)
-
+    # Validate
+    validate_paths(args.metadata, args.station_dir)
+    # Load metadata and list codes
+    meta = load_metadata(args.metadata)
+    codes = list_station_codes(meta)
+    # Optionally load one station
+    code = args.sample_code or codes[0]
+    df = load_station_data(code, args.station_dir)
     print("data_io smoke test completed successfully.")

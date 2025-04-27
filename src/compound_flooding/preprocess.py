@@ -77,10 +77,16 @@ def preprocess_dataframe(
 
     # Detrend sea_level if requested
     if detrend and 'sea_level' in df.columns:
-        x = df['sea_level'].astype(float).values
-        idx = np.arange(len(x))
-        m, b = np.polyfit(idx, x, 1)
-        df['sea_level'] = x - (m * idx + b)
+        # Detrend sea_level using only valid (non-NaN) points
+        ser = df['sea_level'].astype(float)
+        valid = ser.dropna()
+        if len(valid) >= 2:
+            # positions of valid observations
+            pos = np.arange(len(ser))[~np.isnan(ser.values)]
+            # fit trend on valid data
+            m, b = np.polyfit(pos, valid.values, 1)
+            # subtract trend from full series, preserving NaNs
+            df['sea_level'] = ser - (m * np.arange(len(ser)) + b)
 
     # Convert to xarray
     ds = xr.Dataset.from_dataframe(df)
