@@ -19,7 +19,7 @@ from scipy.stats import genpareto
 from typing import Dict, List, Tuple, Union, Optional, Any, Callable
 
 # Import base visualization utilities
-from compound_flooding.visualization.base import (
+from src.compound_flooding.visualization.base import (
     FIG_SIZES, set_publication_style, save_figure, 
     RED_BLUE_CMAP, CPR_CMAP, RISK_CMAP, SEA_CMAP, PRECIP_CMAP
 )
@@ -1034,7 +1034,7 @@ def create_tier1_summary_report(
 if __name__ == "__main__":
     # Basic test of the module
     import sys
-    from compound_flooding.visualization.base import load_tier1_results, create_output_dirs
+    from src.compound_flooding.visualization.base import load_tier1_results, create_output_dirs
     
     print("Testing tier1_plots module...")
     

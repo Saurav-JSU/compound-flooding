@@ -14,7 +14,7 @@ Modules:
 """
 
 # Import base utilities
-from compound_flooding.visualization.base import (
+from src.compound_flooding.visualization.base import (
     set_publication_style,
     save_figure,
     FIG_SIZES,
@@ -27,7 +27,7 @@ from compound_flooding.visualization.base import (
 )
 
 # Import Tier 1 visualization functions
-from compound_flooding.visualization.tier1_plots import (
+from src.compound_flooding.visualization.tier1_plots import (
     plot_gpd_diagnostics,
     plot_joint_exceedance,
     plot_cpr_heatmap,
@@ -38,7 +38,7 @@ from compound_flooding.visualization.tier1_plots import (
 )
 
 # Import Tier 2 visualization functions
-from compound_flooding.visualization.tier2_plots import (
+from src.compound_flooding.visualization.tier2_plots import (
     plot_copula_density,
     plot_joint_return_periods,
     plot_conditional_exceedance,
@@ -49,7 +49,7 @@ from compound_flooding.visualization.tier2_plots import (
 )
 
 # Import map visualization functions
-from compound_flooding.visualization.maps import (
+from src.compound_flooding.visualization.maps import (
     create_base_map,
     plot_station_map,
     plot_tier1_parameter_map,
@@ -59,7 +59,7 @@ from compound_flooding.visualization.maps import (
 )
 
 # Import event visualization functions
-from compound_flooding.visualization.events import (
+from src.compound_flooding.visualization.events import (
     load_event_data,
     plot_event_timeseries,
     plot_multi_station_event,
@@ -69,7 +69,7 @@ from compound_flooding.visualization.events import (
 )
 
 # Import export utilities
-from compound_flooding.visualization.export import (
+from src.compound_flooding.visualization.export import (
     create_multi_panel_figure,
     create_panel_function,
     create_regional_comparison_figure,

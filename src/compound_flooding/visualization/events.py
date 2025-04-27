@@ -21,7 +21,7 @@ from typing import Dict, List, Tuple, Union, Optional, Any, Callable
 from datetime import datetime, timedelta
 
 # Import base visualization utilities
-from compound_flooding.visualization.base import (
+from src.compound_flooding.visualization.base import (
     FIG_SIZES, set_publication_style, save_figure, 
     RED_BLUE_CMAP, CPR_CMAP, RISK_CMAP, SEA_CMAP, PRECIP_CMAP
 )
@@ -1165,7 +1165,7 @@ def compare_multiple_events(
 if __name__ == "__main__":
     # Basic test of the module
     import sys
-    from compound_flooding.visualization.base import (
+    from src.compound_flooding.visualization.base import (
         load_tier1_results,
         create_output_dirs
     )

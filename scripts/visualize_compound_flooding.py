@@ -23,7 +23,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 # Import visualization package
-from compound_flooding.visualization import (
+from src.compound_flooding.visualization import (
     # Base utilities
     set_publication_style, create_output_dirs, 
     load_tier1_results, load_tier2_results, load_station_metadata,

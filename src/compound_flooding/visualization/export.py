@@ -16,7 +16,7 @@ import matplotlib.gridspec as gridspec
 from typing import Dict, List, Tuple, Union, Optional, Any, Callable
 
 # Import base visualization utilities
-from compound_flooding.visualization.base import (
+from src.compound_flooding.visualization.base import (
     FIG_SIZES, set_publication_style, save_figure,
     load_tier1_results, load_tier2_results, load_station_metadata
 )
@@ -423,21 +423,21 @@ def create_publication_figure(
     
     # Import required visualization modules on demand
     if figure_type in ['compound_risk_map', 'return_period_map']:
-        from compound_flooding.visualization.maps import (
+        from src.compound_flooding.visualization.maps import (
             plot_compound_flood_risk_map,
             plot_tier2_parameter_map,
             plot_tier1_parameter_map
         )
     
     if figure_type in ['regional_dependence', 'copula_comparison']:
-        from compound_flooding.visualization.tier2_plots import (
+        from src.compound_flooding.visualization.tier2_plots import (
             plot_copula_density,
             plot_tail_dependence,
             plot_joint_return_periods,
             plot_conditional_exceedance
         )
         
-        from compound_flooding.visualization.tier1_plots import (
+        from src.compound_flooding.visualization.tier1_plots import (
             plot_joint_exceedance,
             plot_gpd_diagnostics
         )
@@ -647,7 +647,7 @@ def create_all_publication_figures(
 if __name__ == "__main__":
     # Basic test of the module
     import sys
-    from compound_flooding.visualization.base import (
+    from src.compound_flooding.visualization.base import (
         load_tier1_results, 
         load_tier2_results, 
         load_station_metadata,
