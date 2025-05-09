@@ -32,6 +32,7 @@ logger = logging.getLogger(__name__)
 
 def plot_copula_density(
     station_data: Dict,
+    ax: Optional[plt.Axes] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -42,6 +43,8 @@ def plot_copula_density(
     ----------
     station_data : Dict
         Tier 2 results for a single station
+    ax : plt.Axes, optional
+        Matplotlib axes to plot on. If None, a new figure is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -56,15 +59,27 @@ def plot_copula_density(
     if ('tier2_analysis' not in station_data or 
         'copula' not in station_data['tier2_analysis']):
         logger.warning("No copula data available")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+            ax.text(0.5, 0.5, "No copula data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "No copula data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
     # Extract copula information
     copula_info = station_data['tier2_analysis']['copula']
     copula_method = copula_info.get('method', 'unknown')
     params = copula_info.get('parameters', {})
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+    # Create figure if ax is not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+    else:
+        fig = ax.figure
+    
     station_code = station_data.get('station', '')
     
     # Create a grid of points for density evaluation
@@ -172,7 +187,7 @@ def plot_copula_density(
     
     # Create contour plot
     contour = ax.contourf(uu, vv, density, levels=20, cmap=RED_BLUE_CMAP)
-    plt.colorbar(contour, ax=ax, label='Density')
+    cbar = fig.colorbar(contour, ax=ax, label='Density')
     
     # Add contour lines
     ax.contour(uu, vv, density, levels=10, colors='black', linewidths=0.5, alpha=0.5)
@@ -200,7 +215,10 @@ def plot_copula_density(
     # Labels and title
     ax.set_xlabel('Sea Level (uniform margin)')
     ax.set_ylabel('Precipitation (uniform margin)')
-    ax.set_title(f"Copula Density - {station_code} - {copula_method}")
+    title_text = f"Copula Density"
+    if station_code:
+        title_text += f" - {station_code} - {copula_method}"
+    ax.set_title(title_text)
     
     # Add text with copula parameters
     if params:
@@ -219,11 +237,11 @@ def plot_copula_density(
                 verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and ax is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, f"{station_code}_copula_density")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and ax is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig
@@ -231,6 +249,7 @@ def plot_copula_density(
 
 def plot_joint_return_periods(
     station_data: Dict,
+    ax: Optional[plt.Axes] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -241,6 +260,8 @@ def plot_joint_return_periods(
     ----------
     station_data : Dict
         Tier 2 results for a single station
+    ax : plt.Axes, optional
+        Matplotlib axes to plot on. If None, a new figure is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -255,13 +276,25 @@ def plot_joint_return_periods(
     if ('tier2_analysis' not in station_data or 
         'joint_return_periods' not in station_data['tier2_analysis']):
         logger.warning("No joint return period data available")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['large'])
+            ax.text(0.5, 0.5, "No joint return period data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "No joint return period data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
     # Extract joint return period information
     joint_rp = station_data['tier2_analysis']['joint_return_periods']
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=FIG_SIZES['large'])
+    # Create figure if ax is not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=FIG_SIZES['large'])
+    else:
+        fig = ax.figure
+    
     station_code = station_data.get('station', '')
     
     # Create a grid for visualization (in probability space)
@@ -395,7 +428,7 @@ def plot_joint_return_periods(
         # Create filled contour plot
         contour = ax.contourf(uu, vv, and_rp, levels=rp_levels, 
                              norm='log', cmap=RISK_CMAP)
-        plt.colorbar(contour, ax=ax, label='Joint Return Period (years)')
+        cbar = fig.colorbar(contour, ax=ax, label='Joint Return Period (years)')
         
         # Add contour lines with labels
         cs = ax.contour(uu, vv, and_rp, levels=rp_levels, 
@@ -423,7 +456,7 @@ def plot_joint_return_periods(
         from matplotlib.colors import LogNorm
         sm = ScalarMappable(cmap=RISK_CMAP, norm=LogNorm(vmin=min_rp, vmax=max_rp))
         sm.set_array([])
-        plt.colorbar(sm, ax=ax, label='Joint Return Period (years)')
+        cbar = fig.colorbar(sm, ax=ax, label='Joint Return Period (years)')
     
     # Add reference lines for independence case
     for t in [10, 100]:
@@ -447,17 +480,20 @@ def plot_joint_return_periods(
     # Labels and title
     ax.set_xlabel('Sea Level (uniform margin)')
     ax.set_ylabel('Precipitation (uniform margin)')
-    ax.set_title(f"Joint Return Periods - {station_code}")
+    title_text = "Joint Return Periods"
+    if station_code:
+        title_text += f" - {station_code}"
+    ax.set_title(title_text)
     
     # Add grid
     ax.grid(True, alpha=0.3)
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and ax is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, f"{station_code}_joint_return_periods")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and ax is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig
@@ -465,6 +501,7 @@ def plot_joint_return_periods(
 
 def plot_conditional_exceedance(
     station_data: Dict,
+    ax: Optional[plt.Axes] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -475,6 +512,8 @@ def plot_conditional_exceedance(
     ----------
     station_data : Dict
         Tier 2 results for a single station
+    ax : plt.Axes, optional
+        Matplotlib axes to plot on. If None, a new figure with multiple axes is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -489,7 +528,15 @@ def plot_conditional_exceedance(
     if ('tier2_analysis' not in station_data or 
         'conditional_probabilities' not in station_data['tier2_analysis']):
         logger.warning("No conditional probability data available")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['wide'])
+            ax.text(0.5, 0.5, "No conditional probability data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "No conditional probability data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
     # Extract conditional probability information
     cond_probs = station_data['tier2_analysis']['conditional_probabilities']
@@ -497,10 +544,29 @@ def plot_conditional_exceedance(
     # Check if we have at least one level of data
     if not cond_probs or not isinstance(cond_probs, dict) or len(cond_probs) == 0:
         logger.warning("Conditional probability data is empty or not a dictionary")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['wide'])
+            ax.text(0.5, 0.5, "Conditional probability data is empty", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "Conditional probability data is empty", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
-    # Create figure with two subplots
-    fig, axes = plt.subplots(1, 2, figsize=FIG_SIZES['wide'])
+    # If ax is provided, we'll use a single axis
+    # If not, we'll create a figure with two subplots
+    if ax is None:
+        fig, axes = plt.subplots(1, 2, figsize=FIG_SIZES['wide'])
+        ax1 = axes[0]
+        ax2 = axes[1]
+        single_ax = False
+    else:
+        fig = ax.figure
+        ax1 = ax
+        ax2 = ax
+        single_ax = True
+    
     station_code = station_data.get('station', '')
     
     # Prepare data for plotting
@@ -525,7 +591,13 @@ def plot_conditional_exceedance(
     # Skip if we don't have enough data
     if len(levels) < 2:
         logger.warning("Not enough conditional probability data for plotting")
-        return None
+        message = "Not enough conditional probability data for plotting"
+        if single_ax:
+            ax.text(0.5, 0.5, message, ha='center', va='center', transform=ax.transAxes)
+        else:
+            ax1.text(0.5, 0.5, message, ha='center', va='center', transform=ax1.transAxes)
+            ax2.text(0.5, 0.5, message, ha='center', va='center', transform=ax2.transAxes)
+        return fig
     
     # Sort by level
     sort_idx = np.argsort(levels)
@@ -535,61 +607,84 @@ def plot_conditional_exceedance(
     p_v_given_u_exceed = [p_v_given_u_exceed[i] for i in sort_idx]
     p_u_given_v_exceed = [p_u_given_v_exceed[i] for i in sort_idx]
     
-    # PLOT 1: Conditional given median
-    ax = axes[0]
-    
-    # Plot P(V>v | U=u_med) and P(U>u | V=v_med)
-    ax.plot(levels, p_v_given_u_med, 'o-', color='blue', 
-            label='P(PR>pr | SL=median)')
-    ax.plot(levels, p_u_given_v_med, 's-', color='green',
-            label='P(SL>sl | PR=median)')
-    
-    # Add reference line for unconditional probability
-    ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
-    
-    # Labels and formatting
-    ax.set_xlabel('Threshold Level')
-    ax.set_ylabel('Conditional Probability')
-    ax.set_title('Conditional on Median')
-    ax.set_xlim(min(levels), max(levels))
-    ax.set_ylim(0, 1)
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    
-    # PLOT 2: Conditional given exceedance
-    ax = axes[1]
-    
-    # Plot P(V>v | U>u) and P(U>u | V>v)
-    ax.plot(levels, p_v_given_u_exceed, 'o-', color='blue',
-            label='P(PR>pr | SL>sl)')
-    ax.plot(levels, p_u_given_v_exceed, 's-', color='green',
-            label='P(SL>sl | PR>pr)')
-    
-    # Add reference line for unconditional probability
-    ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
-    
-    # Labels and formatting
-    ax.set_xlabel('Threshold Level')
-    ax.set_ylabel('Conditional Probability')
-    ax.set_title('Conditional on Exceedance')
-    ax.set_xlim(min(levels), max(levels))
-    ax.set_ylim(0, 1)
-    ax.grid(True, alpha=0.3)
-    ax.legend()
-    
-    # Overall title
-    fig.suptitle(f"Conditional Exceedance Probabilities - {station_code}", fontsize=14)
-    
-    # Adjust layout
-    plt.tight_layout()
-    fig.subplots_adjust(top=0.9)  # Make room for suptitle
+    # If using a single axis, just plot conditional on exceedance
+    if single_ax:
+        # Plot P(V>v | U>u) and P(U>u | V>v)
+        ax.plot(levels, p_v_given_u_exceed, 'o-', color='blue',
+                label='P(PR>pr | SL>sl)')
+        ax.plot(levels, p_u_given_v_exceed, 's-', color='green',
+                label='P(SL>sl | PR>pr)')
+        
+        # Add reference line for unconditional probability
+        ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
+        
+        # Labels and formatting
+        ax.set_xlabel('Threshold Level')
+        ax.set_ylabel('Conditional Probability')
+        title_text = "Conditional Exceedance Probabilities"
+        if station_code:
+            title_text += f" - {station_code}"
+        ax.set_title(title_text)
+        ax.set_xlim(min(levels), max(levels))
+        ax.set_ylim(0, 1)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+    else:
+        # PLOT 1: Conditional given median
+        ax = ax1
+        
+        # Plot P(V>v | U=u_med) and P(U>u | V=v_med)
+        ax.plot(levels, p_v_given_u_med, 'o-', color='blue', 
+                label='P(PR>pr | SL=median)')
+        ax.plot(levels, p_u_given_v_med, 's-', color='green',
+                label='P(SL>sl | PR=median)')
+        
+        # Add reference line for unconditional probability
+        ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
+        
+        # Labels and formatting
+        ax.set_xlabel('Threshold Level')
+        ax.set_ylabel('Conditional Probability')
+        ax.set_title('Conditional on Median')
+        ax.set_xlim(min(levels), max(levels))
+        ax.set_ylim(0, 1)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        # PLOT 2: Conditional given exceedance
+        ax = ax2
+        
+        # Plot P(V>v | U>u) and P(U>u | V>v)
+        ax.plot(levels, p_v_given_u_exceed, 'o-', color='blue',
+                label='P(PR>pr | SL>sl)')
+        ax.plot(levels, p_u_given_v_exceed, 's-', color='green',
+                label='P(SL>sl | PR>pr)')
+        
+        # Add reference line for unconditional probability
+        ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
+        
+        # Labels and formatting
+        ax.set_xlabel('Threshold Level')
+        ax.set_ylabel('Conditional Probability')
+        ax.set_title('Conditional on Exceedance')
+        ax.set_xlim(min(levels), max(levels))
+        ax.set_ylim(0, 1)
+        ax.grid(True, alpha=0.3)
+        ax.legend()
+        
+        # Overall title
+        fig.suptitle(f"Conditional Exceedance Probabilities - {station_code}", fontsize=14)
+        
+        # Adjust layout
+        plt.tight_layout()
+        fig.subplots_adjust(top=0.9)  # Make room for suptitle
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and ax is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, f"{station_code}_conditional_exceedance")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and ax is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig
@@ -597,6 +692,7 @@ def plot_conditional_exceedance(
 
 def plot_tail_dependence(
     station_data: Dict,
+    ax: Optional[plt.Axes] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -607,6 +703,8 @@ def plot_tail_dependence(
     ----------
     station_data : Dict
         Tier 2 results for a single station
+    ax : plt.Axes, optional
+        Matplotlib axes to plot on. If None, a new figure is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -621,7 +719,15 @@ def plot_tail_dependence(
     if ('tier2_analysis' not in station_data or 
         'tail_dependence' not in station_data['tier2_analysis']):
         logger.warning("No tail dependence data available")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['medium'])
+            ax.text(0.5, 0.5, "No tail dependence data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "No tail dependence data available", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
     # Extract tail dependence information
     tail_dep = station_data['tier2_analysis']['tail_dependence']
@@ -631,10 +737,22 @@ def plot_tail_dependence(
     # Skip if both are NaN
     if np.isnan(lower_tail) and np.isnan(upper_tail):
         logger.warning("Both tail dependence coefficients are NaN")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['medium'])
+            ax.text(0.5, 0.5, "Both tail dependence coefficients are NaN", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "Both tail dependence coefficients are NaN", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=FIG_SIZES['medium'])
+    # Create figure if ax is not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=FIG_SIZES['medium'])
+    else:
+        fig = ax.figure
+    
     station_code = station_data.get('station', '')
     
     # Create a simple bar chart
@@ -688,16 +806,19 @@ def plot_tail_dependence(
     
     # Labels and title
     ax.set_ylabel('Tail Dependence Coefficient')
-    ax.set_title(f"Tail Dependence - {station_code}")
+    title_text = "Tail Dependence"
+    if station_code:
+        title_text += f" - {station_code}"
+    ax.set_title(title_text)
     ax.set_ylim(0, 1)
     ax.grid(True, alpha=0.3)
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and ax is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, f"{station_code}_tail_dependence")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and ax is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig
@@ -705,6 +826,7 @@ def plot_tail_dependence(
 
 def plot_station_tier2_summary(
     station_data: Dict,
+    axes: Optional[List[plt.Axes]] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -715,6 +837,9 @@ def plot_station_tier2_summary(
     ----------
     station_data : Dict
         Tier 2 results for a single station
+    axes : List[plt.Axes], optional
+        List of Matplotlib axes to plot on (should have length 4).
+        If None, a new 2x2 grid figure is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -725,267 +850,57 @@ def plot_station_tier2_summary(
     plt.Figure
         Matplotlib figure object
     """
-    # Create figure with 2x2 subplots
-    fig, axes = plt.subplots(2, 2, figsize=FIG_SIZES['full'])
+    # Create figure with 2x2 subplots if axes not provided
+    if axes is None:
+        fig, axes = plt.subplots(2, 2, figsize=FIG_SIZES['full'])
+        axes = axes.flatten()
+    else:
+        fig = axes[0].figure
+    
     station_code = station_data.get('station', '')
-    fig.suptitle(f"Tier 2 Analysis Summary - {station_code}", fontsize=16)
+    if station_code:
+        fig.suptitle(f"Tier 2 Analysis Summary - {station_code}", fontsize=16)
+    else:
+        fig.suptitle(f"Tier 2 Analysis Summary", fontsize=16)
     
-    # PLOT 1: Copula Density
-    ax = axes[0, 0]
+    # PLOT 1: Copula Density (top left)
+    plot_copula_density(
+        station_data=station_data,
+        ax=axes[0],
+        show=False
+    )
     
-    # Check if copula data is available
-    if ('tier2_analysis' in station_data and 
-        'copula' in station_data['tier2_analysis']):
-        
-        # Extract copula information
-        copula_info = station_data['tier2_analysis']['copula']
-        copula_method = copula_info.get('method', 'unknown')
-        params = copula_info.get('parameters', {})
-        
-        # Create a simplified copula density visualization
-        u = np.linspace(0.01, 0.99, 50)  # reduced resolution for summary
-        v = np.linspace(0.01, 0.99, 50)
-        uu, vv = np.meshgrid(u, v)
-        
-        # Compute simplified density for visualization
-        density = np.ones((50, 50))  # Default to independence
-        
-        if copula_method == 'Gaussian':
-            # Simplified Gaussian case
-            rho = params.get('rho', 0)
-            if rho:
-                from scipy.stats import multivariate_normal
-                cov = np.array([[1, rho], [rho, 1]])
-                mvn = multivariate_normal(mean=[0, 0], cov=cov)
-                
-                # Simplified density (no exact transform to uniform margins)
-                xx, yy = np.meshgrid(np.linspace(-3, 3, 50), np.linspace(-3, 3, 50))
-                pos = np.dstack((xx, yy))
-                density = mvn.pdf(pos)
-        
-        # Create contour plot
-        contour = ax.contourf(uu, vv, density, levels=10, cmap=RED_BLUE_CMAP)
-        
-        # Add parameter annotation
-        if params:
-            param_text = f"Copula: {copula_method}\n"
-            for k, v in params.items():
-                param_text += f"{k} = {v:.3f}\n"
-                
-            ax.text(0.05, 0.95, param_text, transform=ax.transAxes, fontsize=8,
-                    verticalalignment='top', bbox=dict(boxstyle='round', facecolor='white', alpha=0.7))
+    # PLOT 2: Joint Return Periods (top right)
+    plot_joint_return_periods(
+        station_data=station_data,
+        ax=axes[1],
+        show=False
+    )
     
-    ax.set_title('Copula Density')
-    ax.set_xlabel('Sea Level (U)')
-    ax.set_ylabel('Precipitation (V)')
+    # PLOT 3: Tail Dependence (bottom left)
+    plot_tail_dependence(
+        station_data=station_data,
+        ax=axes[2],
+        show=False
+    )
     
-    # PLOT 2: Joint Return Periods
-    ax = axes[0, 1]
-    
-    # Check if joint return period data is available
-    if ('tier2_analysis' in station_data and 
-        'joint_return_periods' in station_data['tier2_analysis']):
-        
-        # Extract joint return period data
-        joint_rp = station_data['tier2_analysis']['joint_return_periods']
-        
-        # Plot specific return period levels
-        key_rps = ['10', '100']
-        markers = ['o', 's']
-        colors = ['blue', 'red']
-        
-        for key_rp, marker, color in zip(key_rps, markers, colors):
-            if key_rp in joint_rp:
-                rp_data = joint_rp[key_rp]
-                u_level = rp_data.get('u_level', np.nan)
-                v_level = rp_data.get('v_level', np.nan)
-                and_rp = rp_data.get('and_return_period', np.nan)
-                
-                if not np.isnan(u_level) and not np.isnan(v_level) and not np.isnan(and_rp):
-                    ax.scatter(u_level, v_level, s=100, color=color, marker=marker, zorder=10)
-                    ax.text(u_level, v_level+0.05, f"{key_rp}yr → {and_rp:.0f}yr", 
-                            fontsize=8, ha='center', va='bottom', color=color, zorder=11)
-                    
-                    # Draw lines to axes for reference
-                    ax.plot([0, u_level], [v_level, v_level], 
-                            color=color, linestyle=':', alpha=0.5)
-                    ax.plot([u_level, u_level], [0, v_level], 
-                            color=color, linestyle=':', alpha=0.5)
-        
-        # Create a grid for visualization
-        u = np.linspace(0.01, 0.99, 50)
-        v = np.linspace(0.01, 0.99, 50)
-        uu, vv = np.meshgrid(u, v)
-        
-        # Plot return period isolines for reference
-        # We'll use a simplistic model for visualization purposes
-        levels = [2, 5, 10, 20, 50, 100, 200, 500]
-        
-        # Get representative and_rp values from the data
-        rp_values = []
-        u_values = []
-        v_values = []
-        
-        for rp_key, rp_val in joint_rp.items():
-            try:
-                rp = float(rp_key)
-                and_rp = rp_val.get('and_return_period', np.nan)
-                u_level = rp_val.get('u_level', np.nan)
-                v_level = rp_val.get('v_level', np.nan)
-                
-                if not np.isnan(and_rp) and not np.isnan(u_level) and not np.isnan(v_level):
-                    rp_values.append(rp)
-                    u_values.append(u_level)
-                    v_values.append(v_level)
-            except ValueError:
-                pass
-        
-        # If we have at least one value, create a simple contour for visualization
-        if len(rp_values) > 0:
-            # Create a simple model for joint return periods
-            # based on available data points
-            # This is a very crude approximation for visualization
-            
-            # Compare the actual joint return period to the independence case
-            independence_factor = 1.0
-            if len(rp_values) > 0:
-                # Get the highest return period
-                max_idx = np.argmax(rp_values)
-                rp = rp_values[max_idx]
-                and_rp = joint_rp[str(rp)].get('and_return_period', rp)
-                
-                # In independence case, T_and = 1/(p^2) = T^2
-                if and_rp < rp**2:
-                    # Negative dependence
-                    independence_factor = 0.5
-                else:
-                    # Positive dependence
-                    independence_factor = 2.0
-            
-            # Generate a simplified model for visualization
-            and_rp_grid = np.zeros((50, 50))
-            for i in range(50):
-                for j in range(50):
-                    ui, vj = uu[i,j], vv[i,j]
-                    p_i = 1 - ui
-                    p_j = 1 - vj
-                    p_joint = p_i * p_j * independence_factor
-                    and_rp_grid[i,j] = 1 / max(p_joint, 1e-6)
-            
-            # Create contour lines
-            cs = ax.contour(uu, vv, and_rp_grid, levels=levels, 
-                           colors='black', linewidths=0.5, alpha=0.5)
-            ax.clabel(cs, inline=True, fontsize=8, fmt='%dyr')
-    
-    ax.set_title('Joint Return Periods')
-    ax.set_xlabel('Sea Level (U)')
-    ax.set_ylabel('Precipitation (V)')
-    ax.grid(True, alpha=0.3)
-    
-    # PLOT 3: Tail Dependence
-    ax = axes[1, 0]
-    
-    # Check if tail dependence data is available
-    if ('tier2_analysis' in station_data and 
-        'tail_dependence' in station_data['tier2_analysis']):
-        
-        # Extract tail dependence information
-        tail_dep = station_data['tier2_analysis']['tail_dependence']
-        lower_tail = tail_dep.get('lower', np.nan)
-        upper_tail = tail_dep.get('upper', np.nan)
-        
-        if not np.isnan(lower_tail) or not np.isnan(upper_tail):
-            # Create simple bar chart
-            labels = ['Lower Tail', 'Upper Tail']
-            values = [lower_tail, upper_tail]
-            colors = ['blue', 'red']
-            
-            # Create bars
-            bars = ax.bar(labels, values, color=colors, alpha=0.7)
-            
-            # Add value labels on bars
-            for bar, value in zip(bars, values):
-                if not np.isnan(value):
-                    height = value
-                    ax.text(bar.get_x() + bar.get_width()/2., height + 0.02,
-                           f'{value:.3f}', ha='center', va='bottom', fontsize=10)
-                else:
-                    ax.text(bar.get_x() + bar.get_width()/2., 0.02,
-                           'N/A', ha='center', va='bottom', fontsize=10)
-            
-            # Add reference line for no tail dependence
-            ax.axhline(0, color='black', linestyle='--', alpha=0.5)
-            
-            # Set y-axis limits
-            ax.set_ylim(0, 1)
-    
-    ax.set_title('Tail Dependence')
-    ax.set_ylabel('Coefficient')
-    ax.grid(True, alpha=0.3)
-    
-    # PLOT 4: Conditional Exceedance Probabilities
-    ax = axes[1, 1]
-    
-    # Check if conditional probability data is available
-    if ('tier2_analysis' in station_data and 
-        'conditional_probabilities' in station_data['tier2_analysis']):
-        
-        # Extract conditional probability information
-        cond_probs = station_data['tier2_analysis']['conditional_probabilities']
-        
-        # Prepare data for plotting
-        levels = []
-        p_v_given_u_exceed = []
-        p_u_given_v_exceed = []
-        
-        for level, data in cond_probs.items():
-            try:
-                level_float = float(level)
-                levels.append(level_float)
-                p_v_given_u_exceed.append(data.get('p_v_given_u_exceed', np.nan))
-                p_u_given_v_exceed.append(data.get('p_u_given_v_exceed', np.nan))
-            except (ValueError, TypeError):
-                pass
-        
-        # Plot if we have data
-        if len(levels) >= 2:
-            # Sort by level
-            sort_idx = np.argsort(levels)
-            levels = [levels[i] for i in sort_idx]
-            p_v_given_u_exceed = [p_v_given_u_exceed[i] for i in sort_idx]
-            p_u_given_v_exceed = [p_u_given_v_exceed[i] for i in sort_idx]
-            
-            # Plot conditional probabilities
-            ax.plot(levels, p_v_given_u_exceed, 'o-', color='blue',
-                    label='P(PR>pr | SL>sl)')
-            ax.plot(levels, p_u_given_v_exceed, 's-', color='green',
-                    label='P(SL>sl | PR>pr)')
-            
-            # Add reference line for unconditional probability
-            ax.plot(levels, 1 - np.array(levels), 'k--', label='Unconditional')
-            
-            # Set axis limits
-            ax.set_xlim(min(levels), max(levels))
-            ax.set_ylim(0, 1)
-            
-            # Add legend
-            ax.legend(fontsize=8)
-    
-    ax.set_title('Conditional Exceedance')
-    ax.set_xlabel('Threshold Level')
-    ax.set_ylabel('Probability')
-    ax.grid(True, alpha=0.3)
+    # PLOT 4: Conditional Exceedance Probabilities (bottom right)
+    plot_conditional_exceedance(
+        station_data=station_data,
+        ax=axes[3],
+        show=False
+    )
     
     # Adjust layout
     plt.tight_layout()
     fig.subplots_adjust(top=0.9)  # Make room for suptitle
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and axes is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, f"{station_code}_tier2_summary")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and axes is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig
@@ -994,6 +909,7 @@ def plot_station_tier2_summary(
 def plot_tau_vs_cpr(
     tier1_data: Dict, 
     tier2_data: Dict,
+    ax: Optional[plt.Axes] = None,
     output_dir: str = None,
     show: bool = True
 ) -> plt.Figure:
@@ -1006,6 +922,8 @@ def plot_tau_vs_cpr(
         Dictionary mapping station codes to Tier 1 results
     tier2_data : Dict
         Dictionary mapping station codes to Tier 2 results
+    ax : plt.Axes, optional
+        Matplotlib axes to plot on. If None, a new figure is created.
     output_dir : str, optional
         Directory to save figure
     show : bool, optional
@@ -1072,17 +990,28 @@ def plot_tau_vs_cpr(
     # Skip if we don't have enough data
     if len(stations) < 3:
         logger.warning("Not enough stations with both tau and CPR data")
-        return None
+        if ax is None:
+            fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+            ax.text(0.5, 0.5, "Not enough stations with both tau and CPR data", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return fig
+        else:
+            ax.text(0.5, 0.5, "Not enough stations with both tau and CPR data", 
+                   ha='center', va='center', transform=ax.transAxes)
+            return ax.figure
     
-    # Create figure
-    fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+    # Create figure if ax is not provided
+    if ax is None:
+        fig, ax = plt.subplots(figsize=FIG_SIZES['square'])
+    else:
+        fig = ax.figure
     
     # Create scatter plot
     sc = ax.scatter(taus, cprs, c=cprs, cmap=CPR_CMAP, 
                    alpha=0.7, s=100, edgecolor='black')
     
     # Add colorbar
-    plt.colorbar(sc, ax=ax, label='CPR')
+    cbar = fig.colorbar(sc, ax=ax, label='CPR')
     
     # Add station labels
     for i, station in enumerate(stations):
@@ -1127,11 +1056,11 @@ def plot_tau_vs_cpr(
     ax.grid(True, alpha=0.3)
     
     # Save if output directory is provided
-    if output_dir:
+    if output_dir and ax is None:  # Only save if we created the figure ourselves
         filename = os.path.join(output_dir, "tau_vs_cpr_relationship")
         save_figure(fig, filename)
     
-    if not show:
+    if not show and ax is None:  # Only close if we created the figure ourselves
         plt.close(fig)
     
     return fig

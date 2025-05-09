@@ -888,8 +888,10 @@ def plot_bootstrap_comparison(
     # Plot shape parameter
     ax = axes[0]
     x = np.arange(len(station_codes))
-    ax.errorbar(x, shape_means, yerr=(shape_means - shape_cis[:, 0], shape_cis[:, 1] - shape_means),
-               fmt='o', ecolor='blue', capsize=5, color='blue')
+    lower_errors = np.abs(shape_means - shape_cis[:, 0])
+    upper_errors = np.abs(shape_cis[:, 1] - shape_means)
+    ax.errorbar(x, shape_means, yerr=[lower_errors, upper_errors], 
+            fmt='o', ecolor='blue', capsize=5, color='blue')
     
     # Labels and title
     ax.set_ylabel('Shape Parameter (ξ)')
@@ -902,8 +904,10 @@ def plot_bootstrap_comparison(
     
     # Plot scale parameter
     ax = axes[1]
-    ax.errorbar(x, scale_means, yerr=(scale_means - scale_cis[:, 0], scale_cis[:, 1] - scale_means),
-               fmt='o', ecolor='green', capsize=5, color='green')
+    lower_errors = np.abs(scale_means - scale_cis[:, 0])
+    upper_errors = np.abs(scale_cis[:, 1] - scale_means)
+    ax.errorbar(x, scale_means, yerr=[lower_errors, upper_errors],
+            fmt='o', ecolor='green', capsize=5, color='green')
     
     # Labels and title
     ax.set_xlabel('Station')

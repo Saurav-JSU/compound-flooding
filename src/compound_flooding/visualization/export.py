@@ -14,6 +14,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from typing import Dict, List, Tuple, Union, Optional, Any, Callable
+import seaborn as sns
 
 # Import base visualization utilities
 from src.compound_flooding.visualization.base import (
