@@ -8,6 +8,7 @@ Modules:
 - base: Base visualization utilities and common settings
 - tier1_plots: Tier 1 specific visualizations (extreme values, joint exceedances)
 - tier2_plots: Tier 2 specific visualizations (copulas, tail dependence)
+- tier3_plots: Tier 3 specific visualizations (Bayesian Networks, sensitivity analysis)
 - maps: Spatial visualization across stations
 - events: Event-specific visualization (hurricanes, storms)
 - export: Publication-ready figure export utilities
@@ -46,6 +47,18 @@ from src.compound_flooding.visualization.tier2_plots import (
     plot_station_tier2_summary,
     plot_tau_vs_cpr,
     create_tier2_summary_report
+)
+
+# Import Tier 3 visualization functions
+from src.compound_flooding.visualization.tier3_plots import (
+    load_tier3_results,
+    plot_bayesian_network,
+    plot_cpt_heatmap,
+    plot_sensitivity_analysis,
+    plot_risk_distribution,
+    plot_validation_metrics,
+    plot_station_tier3_summary,
+    create_tier3_summary_report
 )
 
 # Import map visualization functions
@@ -93,6 +106,11 @@ __all__ = [
     'plot_copula_density', 'plot_joint_return_periods', 'plot_conditional_exceedance',
     'plot_tail_dependence', 'plot_station_tier2_summary', 'plot_tau_vs_cpr',
     'create_tier2_summary_report',
+    
+    # Tier 3 visualizations
+    'load_tier3_results', 'plot_bayesian_network', 'plot_cpt_heatmap', 'plot_sensitivity_analysis',
+    'plot_risk_distribution', 'plot_validation_metrics', 'plot_station_tier3_summary',
+    'create_tier3_summary_report',
     
     # Map visualizations
     'create_base_map', 'plot_station_map', 'plot_tier1_parameter_map',
